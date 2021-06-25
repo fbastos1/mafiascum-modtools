@@ -6,6 +6,7 @@ game:
 
 players:
   - bugspray
+  - T3
   - Anya
   - VFP
   - geraintm
@@ -30,6 +31,8 @@ aliases:
   humaneatingmonkey:
     - hem
     - humaneating monkey
+    - monkeyhuman
+    - monkeyeater
   Dunnstral:
     - dunn
   InsidiousLemons:
