@@ -1,0 +1,44 @@
+game:
+  base_url: https://forum.mafiascum.net/viewtopic.php
+  params:
+    f: 2
+    t: 86587
+
+players:
+  - bugspray
+  - Anya
+  - VFP
+  - geraintm
+  - Ivyeo
+  - Egix96
+  - osuka
+  - humaneatingmonkey
+  - Dunnstral
+  - InsidiousLemons
+  - Umlaut
+
+aliases:
+  bugspray:
+    - bug
+    - bs
+  geraintm:
+    - gerain
+  Ivyeo:
+    - ivy
+  Egix96:
+    - egix
+  humaneatingmonkey:
+    - hem
+    - humaneating monkey
+  Dunnstral:
+    - dunn
+  InsidiousLemons:
+    - lemons
+  Andante:
+    - anda
+
+replacements:
+  VFP:
+    - Andante
+  humaneatingmonkey:
+    - choof
