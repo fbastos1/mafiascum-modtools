@@ -45,3 +45,6 @@ replacements:
     - Andante
   humaneatingmonkey:
     - choof
+
+ignore:
+  - cook

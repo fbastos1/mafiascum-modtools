@@ -13,6 +13,10 @@ NO_EXEC_VOTES = [
     'no elimination',
     'no elim'
 ]
+UNVOTE_VOTES = [
+    'unvote',
+    '',
+]
 logger = logging.getLogger('votecounter')
 
 
@@ -101,13 +105,12 @@ def last_action_index(action, actions):
         int for last instance of a given action in actions, if found. -1 otherwise
     """
     try:
-        print(actions)
         return max(idx for idx, val in enumerate(actions) if val[0] == action)
     except ValueError:
         return -1
 
 
-def resolve_vote(vote, players_lower, aliases, replacements):
+def resolve_vote(vote, players_lower, aliases, replacements, ignores):
     """Resolves a vote/unvote
 
     Args:
@@ -119,8 +122,20 @@ def resolve_vote(vote, players_lower, aliases, replacements):
     Returns:
         vote, with vote['voter'] resolved to be a player in the game or None (for unvote)
     """
-    print(aliases)
-    print(replacements)
+    if vote['target'] and vote['target'].lower() in ignores:
+        return {}
+
+    alias_map = {}
+    for reverse_alias_source in aliases.items(), replacements.items():
+        for k, v in reverse_alias_source:
+            alias_map.update(
+                {alias.lower(): k.lower() for alias in v}
+            )
+
+    vote['voter'] = recursive_resolve_alias(vote['voter'].lower(), alias_map)
+    if vote['voter'].lower() not in players_lower:
+        return vote
+
     if vote['target'] is None:
         logger.debug('{}: {} -> {}'
                      .format(
@@ -130,18 +145,7 @@ def resolve_vote(vote, players_lower, aliases, replacements):
                      ))
         return vote
 
-    if vote['voter'].lower() not in players_lower:
-        return vote
-
     vote['target'] = vote['target'].lower()
-    vote['voter'] = vote['voter'].lower()
-
-    alias_map = {}
-    for reverse_alias_source in aliases.items(), replacements.items():
-        for k, v in reverse_alias_source:
-            alias_map.update(
-                {alias.lower(): k.lower() for alias in v}
-            )
 
     if vote['target'] not in players_lower and vote['target'] not in alias_map:
         logger.info(
@@ -233,6 +237,11 @@ def get_page_votes(url, params=None, page=1):
         if not actions:
             continue
 
+        #  handle the stupid "VOTE: unvote"
+        for i in range(len(actions)):
+            if actions[i][0] == 'VOTE' and actions[i][1].lower() in UNVOTE_VOTES:
+                actions[i] = ('UNVOTE', None)
+
         #  TODO: make this not garbage
         number_of_votes = tuple(map(lambda t: t[0], actions)).count('VOTE')
         last_target = actions[-1][1] if actions[-1][0] == 'VOTE' else None
@@ -317,6 +326,7 @@ def count_votes(game_definition, start=None, end=None):
     players = game['players']
     aliases = game['aliases']
     replacements = game['replacements']
+    ignores = game['ignore']
 
     game_url = game['game']['base_url']
     params = game['game']['params']
@@ -352,18 +362,20 @@ def count_votes(game_definition, start=None, end=None):
                         d,
                         tuple(map(str.lower, players)),
                         aliases,
-                        replacements
+                        replacements,
+                        ignores,
                     )},
                 get_page_votes(game_url, params, pg+1)
         ):
+            if not vote or int(vote['post_number']) < start or vote['voter'] not in players_lower:
+                continue
+
             if int(vote['post_number']) > end:
                 return {
                     'hammer': False,
                     'votes': votes,
                     'vote_counts': vote_counts,
                 }
-            if int(vote['post_number']) < start or vote['voter'] not in players_lower:
-                continue
 
             try:
                 vote_counts[votes[vote['voter']]['target']] -= 1
@@ -377,7 +389,7 @@ def count_votes(game_definition, start=None, end=None):
             if vote['target'] is not None:
                 vote_counts[vote['target']] += 1
 
-            if max(vote_counts.values()) > len(players)//2 + 1:
+            if max(vote_counts.values()) > len(players)//2:
                 return {
                     'hammer': True,
                     'votes': votes,
