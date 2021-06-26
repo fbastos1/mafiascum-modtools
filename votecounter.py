@@ -222,8 +222,11 @@ def get_page_votes(url, params=None, page=1):
         post_number = post_p.find('strong').string[1:]
         post_url = post_p.find('a', href=True)['href'][1:]
         post_content = post.find('div', {'class': 'content'})
-        for quote in post_content.find_all('blockquote'):
-            quote.extract()
+
+        ignored_tags = ('blockquote', 'quotecontent')
+        for tag in ignored_tags:
+            for element in post_content.find_all(tag):
+                element.extract()
 
         actions = list(
             map(
@@ -406,7 +409,7 @@ def count_votes(game_definition, start=None, end=None):
 if __name__ == '__main__':
     game = parse_game_yaml('mini2218.yaml')
     try:
-        res = count_votes(game, end=526)
+        res = count_votes(game)
     except UnresolvedVoteError as e:
         logger.critical(f'Could not complete vote counting! UnresolvedVoteError: {e}')
         exit(1)
