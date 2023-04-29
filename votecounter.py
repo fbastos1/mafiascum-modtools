@@ -4,6 +4,7 @@ from ruamel.yaml import YAML
 import jellyfish
 import logging
 import coloredlogs
+import argparse
 
 JARO_WINKLER_ACCEPT_THRESHOLD = 0.88
 JARO_WINKLER_WARN_THRESHOLD = 0.95
@@ -110,7 +111,7 @@ def last_action_index(action, actions):
         return -1
 
 
-def resolve_vote(vote, players_lower, aliases, replacements, ignores):
+def resolve_vote(vote, players_lower, aliases, replacements, ignores, literal_match_only=False, ignore_aliases=False):
     """Resolves a vote/unvote
 
     Args:
@@ -148,6 +149,13 @@ def resolve_vote(vote, players_lower, aliases, replacements, ignores):
     vote['target'] = vote['target'].lower()
 
     if vote['target'] not in players_lower and vote['target'] not in alias_map:
+        if literal_match_only:
+            logger.critical(
+                'Could not resolve {}\'s vote in #{}: {} is not in player list.'
+                .format(vote['voter'], vote['post_number'], vote['target'])
+            )
+            raise UnresolvedVoteError(vote['target'], vote['post_number'], vote['voter'])
+
         logger.info(
             'Player {} voted {} in #{}, but target is not in aliases. Attempting fuzzy matching'
             .format(vote['voter'], vote['target'], vote['post_number'])
@@ -184,6 +192,9 @@ def resolve_vote(vote, players_lower, aliases, replacements, ignores):
 
         vote['target'] = vote_target
 
+    if ignore_aliases and vote['target'] not in players_lower:
+        raise UnresolvedVoteError(vote['target'], vote['post_number'], vote['voter'])
+        
     vote['target'] = recursive_resolve_alias(vote['target'], alias_map)
     logger.debug('{}: {} -> {}'
                  .format(
@@ -213,14 +224,14 @@ def get_page_votes(url, params=None, page=1):
     rq = requests.get(url, params=params)
     soup = BeautifulSoup(rq.text, 'html.parser')
     for post in soup.find_all('div', {'class': 'post'}):
-        profile = (post.find('div', {'class': 'postprofilecontainer'})
-                   .find('dt')
-                   .find('a').string
-                   )
-        username = profile.string
-        post_p = post.find('p', {'class': 'author'})
-        post_number = post_p.find('strong').string[1:]
-        post_url = post_p.find('a', href=True)['href'][1:]
+        profile = post.find('dl', {'class': 'postprofile'})
+        try:
+            username = profile.find('a', {'class': 'username'}).text
+        except AttributeError:
+            # the fucking mods break the votecounter!!!
+            username = profile.find('a', {'class': 'username-coloured'}).text
+        post_number = post.find('span', {'class': 'post-number-bolded'}).text[1:]
+        post_url = post.find('a', {'class': 'unread'}, href=True)['href'][1:]
         post_content = post.find('div', {'class': 'content'})
 
         ignored_tags = ('blockquote', 'quotecontent')
@@ -288,10 +299,9 @@ def get_page_count(url, params):
     soup = BeautifulSoup(rq.text, 'html.parser')
 
     try:
-        return int(soup.find('div', {'class': 'pagination'})
-                   .find('span')
-                   .find_all('a')[-1].text
-                   )
+        # horrible hack. fix later
+        # may completely break if there is only 1 page lol
+        return int(soup.find('div', {'class': 'pagination'}).text.split()[-2])
     except AttributeError:
         return 1
 
@@ -313,18 +323,18 @@ def parse_game_yaml(filename):
         logger.critical('could not find game file {}'.format(filename))
 
 
-def count_votes(game_definition, start=None, end=None):
+def count_votes(game_definition, start=None, end=None, **kwargs):
     """counts the votes for a game.
 
     Args:
         game_definition -- the game definition, as parsed by `parse_game_yaml`
         start -- optional; number post to start counting from. inclusive
-        end --  optional; number post to end counting at. inclusive
+        end -- optional; number post to end counting at. inclusive
 
     Returns:
         dictionary containing boolean for hammer, list of votes, and number of votes for each player
     """
-    coloredlogs.install(level='DEBUG', logger=logger)
+    coloredlogs.install(level=logger.getEffectiveLevel(), logger=logger)
 
     players = game['players']
     aliases = game['aliases']
@@ -357,6 +367,7 @@ def count_votes(game_definition, start=None, end=None):
     if end is None:
         end = page_count * 25
 
+    hammer = False
     for pg in range(start//25, page_count):
         logger.debug('-- page {} --'.format(pg+1))
         for vote in map(
@@ -367,6 +378,7 @@ def count_votes(game_definition, start=None, end=None):
                         aliases,
                         replacements,
                         ignores,
+                        **kwargs
                     )},
                 get_page_votes(game_url, params, pg+1)
         ):
@@ -375,7 +387,7 @@ def count_votes(game_definition, start=None, end=None):
 
             if int(vote['post_number']) > end:
                 return {
-                    'hammer': False,
+                    'hammer': hammer,
                     'votes': votes,
                     'vote_counts': vote_counts,
                 }
@@ -392,24 +404,53 @@ def count_votes(game_definition, start=None, end=None):
             if vote['target'] is not None:
                 vote_counts[vote['target']] += 1
 
-            if max(vote_counts.values()) > len(players)//2:
+            hammer = max(vote_counts.values()) > len(players)//2
+
+            if hammer and not kwargs.get('ignore_hammer'):
                 return {
-                    'hammer': True,
+                    'hammer': hammer,
                     'votes': votes,
                     'vote_counts': vote_counts,
                 }
 
     return {
-        'hammer': False,
+        'hammer': hammer,
         'votes': votes,
         'vote_counts': vote_counts,
     }
 
 
 if __name__ == '__main__':
-    game = parse_game_yaml('mini2218.yaml')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--start', '-s', type=int, help='the starting post to count from', default=None)
+    parser.add_argument('--end', '-e', type=int, help='the ending post to count to', default=None)
+    parser.add_argument('--log-level', type=str,
+                        help='the logging level for the votecounter', default='INFO',
+                        choices=[f(s) for s in ['info', 'debug', 'warning', 'error'] for f in (lambda s:s.lower(), lambda s:s.upper())])
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--no-fuzzy-match', help='disables fuzzy matching', action='store_true')
+    group.add_argument('--no-alias-resolution', help='disables alias matching', action='store_true')
+    parser.add_argument('--ignore-hammer', help='continues the vote count after hammer', action='store_true')
+
+    parser.add_argument('game_definition_yaml', help='path to the game definition file')
+
+    args = parser.parse_args()
+
+    logger.setLevel(args.log_level.upper())
+
+    parsing_options = {}
+    if args.no_fuzzy_match:
+        parsing_options['literal_match_only'] = True
+    if args.no_alias_resolution:
+        parsing_options['ignore_aliases'] = True
+        parsing_options['literal_match_only'] = True
+    if args.ignore_hammer:
+        parsing_options['ignore_hammer'] = True
+
+    game = parse_game_yaml(args.game_definition_yaml)
     try:
-        res = count_votes(game)
+        res = count_votes(game, start=args.start, end=args.end, **parsing_options)
     except UnresolvedVoteError as e:
         logger.critical(f'Could not complete vote counting! UnresolvedVoteError: {e}')
         exit(1)

@@ -1,50 +1,38 @@
 game:
   base_url: https://forum.mafiascum.net/viewtopic.php
   params:
-    f: 2
-    t: 86587
+    t: 90886
 
 players:
-  - bugspray
-  - T3
-  - Anya
-  - VFP
-  - geraintm
-  - Ivyeo
-  - Egix96
+  - skitter30
+  - VP Baltar
   - osuka
-  - humaneatingmonkey
-  - Dunnstral
-  - InsidiousLemons
-  - Umlaut
+  - fireisredsir
+  - tris
+  - Meuh
+  - hellbooks
+  - Ausuka
+  - Skygazer
 
 aliases:
-  bugspray:
-    - bug
-    - bs
-  geraintm:
-    - gerain
-  Ivyeo:
-    - ivy
-  Egix96:
-    - egix
-  humaneatingmonkey:
-    - hem
-    - humaneating monkey
-    - monkeyhuman
-    - monkeyeater
-  Dunnstral:
-    - dunn
-  InsidiousLemons:
-    - lemons
-  Andante:
-    - anda
-
+  skitter30:
+    - skitter
+    - s30
+  VP Baltar:
+    - vp
+    - vpb
+    - baltar
+  fireisredsir:
+    - fire
+    - red
+  Skygazer:
+    - sky
+    
+# this means datisi  by georgebailey
 replacements:
-  VFP:
-    - Andante
-  humaneatingmonkey:
-    - choof
+  GeorgeBailey:
+    - Datisi
 
+# votes to explicitly ignore in case one of them breaks the votecounter (such as a joke vote)
 ignore:
   - cook
