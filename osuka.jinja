@@ -1,0 +1,28 @@
+[i][color=#{{color}}][size=150]votecount[/size]
+[size=75]day 0, vc 0[/size]
+
+{%- set player_count = player_votes | length %}
+{%- set hammer_count = (player_count + 1)//2 %}
+
+{%- if no_execution | length %}
+[list]
+[*][b]no execution[/b] ({{ no_execution['vote_strings'] | length }}{{', NE-'+(hammer_count - (no_execution['vote_strings'] | length)) | string if hammer_count - (no_execution['vote_strings'] | length) < 4 else ''}}): {{ no_execution['vote_strings'] | join(', ') }}
+[/list]
+{%- endif %}
+[list]
+{%- for player in player_votes %}
+{%- if player['name'] %}
+{%- set player_votecount = player['vote_strings'] | length %}
+[*][b]{{ player['name'] }}[/b] ({{ player_votecount }}{{', E-'+(hammer_count - player_votecount) | string if hammer_count - player_votecount < 4 else ''}}): {{ player['vote_strings'] | join(', ') }}
+{%- endif %}
+{%- endfor %}
+[/list]
+[list]
+[*][b]not voting[/b] ({{ not_voting['vote_strings'] | length }}): {{ not_voting['vote_strings'] | join(', ') }}
+[/list]
+
+with {{ player_count }} alive, it takes {{ hammer_count }} to execute.
+
+the day will end in [countdown][/countdown].
+
+[/color][/i]

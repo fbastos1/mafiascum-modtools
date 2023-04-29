@@ -28,11 +28,11 @@ aliases:
   Skygazer:
     - sky
     
-# this means datisi  by georgebailey
+# this means datisi was replaced by georgebailey
 replacements:
   GeorgeBailey:
     - Datisi
 
 # votes to explicitly ignore in case one of them breaks the votecounter (such as a joke vote)
 ignore:
-  - cook
+  - implosion

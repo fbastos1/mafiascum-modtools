@@ -5,15 +5,18 @@ import jellyfish
 import logging
 import coloredlogs
 import argparse
+from jinja2 import Template
 
 JARO_WINKLER_ACCEPT_THRESHOLD = 0.88
 JARO_WINKLER_WARN_THRESHOLD = 0.95
 NO_EXEC_VOTES = [
     'no execution',
+    'no exec',
     'no lynch',
     'no elimination',
-    'no elim'
+    'no elim',
 ]
+NO_EXEC_VOTE = '## k_no_exec ##'
 UNVOTE_VOTES = [
     'unvote',
     '',
@@ -145,6 +148,15 @@ def resolve_vote(vote, players_lower, aliases, replacements, ignores, literal_ma
                          vote['target'],
                      ))
         return vote
+    elif vote['target'].lower() in NO_EXEC_VOTES:
+        logger.debug('{}: {} -> {}'
+                     .format(
+                         vote['post_number'],
+                         vote['voter'],
+                         vote['target'],
+                     ))
+        vote['target'] = NO_EXEC_VOTE
+        return vote
 
     vote['target'] = vote['target'].lower()
 
@@ -194,7 +206,7 @@ def resolve_vote(vote, players_lower, aliases, replacements, ignores, literal_ma
 
     if ignore_aliases and vote['target'] not in players_lower:
         raise UnresolvedVoteError(vote['target'], vote['post_number'], vote['voter'])
-        
+
     vote['target'] = recursive_resolve_alias(vote['target'], alias_map)
     logger.debug('{}: {} -> {}'
                  .format(
@@ -230,7 +242,7 @@ def get_page_votes(url, params=None, page=1):
         except AttributeError:
             # the fucking mods break the votecounter!!!
             username = profile.find('a', {'class': 'username-coloured'}).text
-        post_number = post.find('span', {'class': 'post-number-bolded'}).text[1:]
+        post_number = int(post.find('span', {'class': 'post-number-bolded'}).text[1:])
         post_url = post.find('a', {'class': 'unread'}, href=True)['href'][1:]
         post_content = post.find('div', {'class': 'content'})
 
@@ -354,7 +366,10 @@ def count_votes(game_definition, start=None, end=None, **kwargs):
         for player in players
     }
     page_count = get_page_count(game_url, params)
-    vote_counts = {player.lower(): 0 for player in players}
+    vote_counts = {
+        **{player.lower(): 0 for player in players},
+        NO_EXEC_VOTE: 0,
+    }
 
     *players_lower, = map(str.lower, players)
     for v in replacements.values():
@@ -420,6 +435,50 @@ def count_votes(game_definition, start=None, end=None, **kwargs):
     }
 
 
+def format_votecount(template, player_list, player_case_map, vote_targets):
+    player_votes = []
+    not_voting = {
+        'vote_strings': []
+    }
+    no_execution = {
+        'vote_strings': []
+    }
+    for player, vote_list in sorted(vote_targets.items(), key=lambda t: len(t[1]), reverse=True):
+        try:
+            player = player_case_map[player]
+        except KeyError:
+            # if the player's name is already cased correctly, we don't have to do anything
+            pass
+
+        vote_strings = []
+        try:
+            vote_list = sorted(vote_list, key=lambda d: d['post_number'])
+        except TypeError:
+            # if a player hasn't voted yet, there won't be a vote for them
+            pass
+
+        vote_strings = []
+        for vote in vote_list:
+            if vote['post_url'] is not None:
+                vote_strings.append(
+                    '[url=https://forum.mafiascum.net{}]{} [size=75]({})[/size][/url]'
+                    .format(vote['post_url'], vote['voter'], vote['post_number']))
+            else:
+                vote_strings.append(vote['voter'])
+
+        if player == NO_EXEC_VOTE:
+            no_execution['vote_strings'].extend(vote_strings)
+        elif player is not None:
+            player_votes.append({
+                'name': player,
+                'vote_strings': vote_strings,
+            })
+        else:
+            not_voting['vote_strings'].extend(vote_strings)
+
+    return template.render(color='ff00ff', player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--start', '-s', type=int, help='the starting post to count from', default=None)
@@ -432,6 +491,7 @@ if __name__ == '__main__':
     group.add_argument('--no-fuzzy-match', help='disables fuzzy matching', action='store_true')
     group.add_argument('--no-alias-resolution', help='disables alias matching', action='store_true')
     parser.add_argument('--ignore-hammer', help='continues the vote count after hammer', action='store_true')
+    parser.add_argument('--template', help='path to a jinja2 template file for formatting', default=None)
 
     parser.add_argument('game_definition_yaml', help='path to the game definition file')
 
@@ -455,34 +515,22 @@ if __name__ == '__main__':
         logger.critical(f'Could not complete vote counting! UnresolvedVoteError: {e}')
         exit(1)
 
-    print('hammer? {}'.format(res['hammer']))
+    logger.info('hammer? {}'.format(res['hammer']))
     vote_targets = {player: [] for player in res['votes']}
     vote_targets[None] = []
+    vote_targets[NO_EXEC_VOTE] = []
 
     for vote in res['votes'].values():
-        print('[{}] {} -> {}'.format(vote['post_number'], vote['voter'], vote['target']))
+        logger.debug('[{}] {} -> {}'.format(vote['post_number'], vote['voter'], vote['target']))
         vote_targets[vote['target']].append(vote)
 
     player_case_map = {player.lower(): player for player in game['players']}
-    player_case_map[None] = 'Not voting'
+    player_case_map[None] = None
 
-    print('\n\tFINAL VOTE COUNT:\n')
-    for player, vote_list in sorted(vote_targets.items(), key=lambda t: len(t[1]), reverse=True):
-        try:
-            player = player_case_map[player]
-        except KeyError:
-            pass  # player already cased correctly
-        vote_strings = []
-        try:
-            vote_list = sorted(vote_list, key=lambda d: d['post_number'])
-        except TypeError:
-            pass  # comparing None, in case players haven't voted yet
-        for vote in vote_list:
-            if vote['post_url'] is not None:
-                vote_strings.append(
-                    '[url=https://forum.mafiascum.net{}]{} [size=75]({})[/size][/url]'
-                    .format(vote['post_url'], vote['voter'], vote['post_number']))
-            else:
-                vote_strings.append(vote['voter'])
-
-        print('[b]{}[/b] ({}): {}'.format(player, len(vote_strings), ', '.join(vote_strings)))
+    if (args.template):
+        with open(args.template) as f:
+            template = Template(f.read())
+            print('\n\tFINAL VOTE COUNT:\n\n')
+            print(format_votecount(template, game['players'], player_case_map, vote_targets))
+    else:
+        print(vote_targets)
