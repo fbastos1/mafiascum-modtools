@@ -27,8 +27,8 @@ Set the starting post for the count. Inclusive. Must be equal to or greater than
 Set the ending post for the count. Inclusive. Must be equal to or greater than zero. If `end` is greater than the number of posts
 in the thread, all posts will be counted.
 
-<pre><strong><i>--format=[PATH TO FORMAT FILE]</i></strong></pre>
-Specifies a file to read the format output definition from. For details, see the Formatter section.
+<pre><strong><i>--template [PATH TO JINJA2 TEMPLATE FILE]</i></strong></pre>
+Specifies a Jinja2 template file to read the format output definition from. For details, see the Formatter section.
 
 <pre><strong><i>--parse-only</i></strong></pre>
 Run the votecounter as a parser (i.e., votes will not be counted). 
@@ -104,3 +104,7 @@ ignore:
   - cook
 
 ```
+
+##### formatter
+
+todo, whoops. look at the example lol
