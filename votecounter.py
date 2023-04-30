@@ -6,6 +6,7 @@ import logging
 import coloredlogs
 import argparse
 from jinja2 import Template
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 JARO_WINKLER_ACCEPT_THRESHOLD = 0.88
 JARO_WINKLER_WARN_THRESHOLD = 0.95
@@ -243,7 +244,15 @@ def get_page_votes(url, params=None, page=1):
             # the fucking mods break the votecounter!!!
             username = profile.find('a', {'class': 'username-coloured'}).text
         post_number = int(post.find('span', {'class': 'post-number-bolded'}).text[1:])
-        post_url = post.find('a', {'class': 'unread'}, href=True)['href'][1:]
+        post_url = urlparse(post.find('a', {'class': 'unread'}, href=True)['href'][1:])
+        post_url_query = parse_qs(post_url.query)
+        if 'sid' in post_url_query:
+            del post_url_query['sid']
+        post_url = list(post_url)
+        # we need to modify the query in the uri - that's the fourth item in the list from urlparse
+        post_url[4] = urlencode(post_url_query, doseq=True)
+        post_url = urlunparse(post_url)
+            
         post_content = post.find('div', {'class': 'content'})
 
         ignored_tags = ('blockquote', 'quotecontent')

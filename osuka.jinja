@@ -13,7 +13,7 @@
 {%- for player in player_votes %}
 {%- if player['name'] %}
 {%- set player_votecount = player['votes'] | length %}
-[*][b]{{ player['name'] }}[/b] ({{ player_votecount }}{{', E-'+(hammer_count - player_votecount) | string if hammer_count - player_votecount < 4 else ''}}): {% for vote in player['votes'] %}{{ '[url=[' + vote['post_url'] + ']'+vote['voter'] + ' [size=75](' + vote['post_number'] | string + ')[/size][/url]' + (', ' if not loop.last else '') }}{%- endfor %}
+[*][b]{{ player['name'] }}[/b] ({{ player_votecount }}{{', E-'+(hammer_count - player_votecount) | string if hammer_count - player_votecount < 4 else ''}}){{':' if player_votecount else ''}} {% for vote in player['votes'] %}{{ '[url=[' + vote['post_url'] + ']'+vote['voter'] + ' [size=75](' + vote['post_number'] | string + ')[/size][/url]' + (', ' if not loop.last else '') }}{%- endfor %}
 {%- endif %}
 {%- endfor %}
 [/list]
