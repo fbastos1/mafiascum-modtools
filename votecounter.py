@@ -437,12 +437,8 @@ def count_votes(game_definition, start=None, end=None, **kwargs):
 
 def format_votecount(template, player_list, player_case_map, vote_targets):
     player_votes = []
-    not_voting = {
-        'vote_strings': []
-    }
-    no_execution = {
-        'vote_strings': []
-    }
+    not_voting = []
+    no_execution = []
     for player, vote_list in sorted(vote_targets.items(), key=lambda t: len(t[1]), reverse=True):
         try:
             player = player_case_map[player]
@@ -457,24 +453,15 @@ def format_votecount(template, player_list, player_case_map, vote_targets):
             # if a player hasn't voted yet, there won't be a vote for them
             pass
 
-        vote_strings = []
-        for vote in vote_list:
-            if vote['post_url'] is not None:
-                vote_strings.append(
-                    '[url=https://forum.mafiascum.net{}]{} [size=75]({})[/size][/url]'
-                    .format(vote['post_url'], vote['voter'], vote['post_number']))
-            else:
-                vote_strings.append(vote['voter'])
-
         if player == NO_EXEC_VOTE:
-            no_execution['vote_strings'].extend(vote_strings)
+            no_execution.extend(vote_list)
         elif player is not None:
             player_votes.append({
                 'name': player,
-                'vote_strings': vote_strings,
+                'votes': vote_list,
             })
         else:
-            not_voting['vote_strings'].extend(vote_strings)
+            not_voting.extend(vote_list)
 
     return template.render(color='ff00ff', player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
 
