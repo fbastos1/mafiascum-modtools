@@ -252,7 +252,7 @@ def get_page_votes(url, params=None, page=1):
         # we need to modify the query in the uri - that's the fourth item in the list from urlparse
         post_url[4] = urlencode(post_url_query, doseq=True)
         post_url = urlunparse(post_url)
-            
+
         post_content = post.find('div', {'class': 'content'})
 
         ignored_tags = ('blockquote', 'quotecontent')
@@ -472,7 +472,7 @@ def format_votecount(template, player_list, player_case_map, vote_targets):
         else:
             not_voting.extend(vote_list)
 
-    return template.render(color='ff00ff', player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
+    return template.render(player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
 
 
 if __name__ == '__main__':
