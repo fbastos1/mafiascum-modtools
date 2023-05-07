@@ -51,7 +51,7 @@ in the thread, all posts will be counted.
 Specifies a Jinja2 template file to read the format output definition from. For details, see the Formatter section.
 
 <pre><strong><i>--parse-only</i></strong></pre>
-Run the votecounter as a parser (i.e., votes will not be counted). 
+Run the votecounter as a parser (i.e., votes will not be counted).
 
 <pre><strong>--no-fuzzy-match</strong></pre>
 Only match player names exactly as spelled in the game definition, or as found in the aliases list.
@@ -127,8 +127,38 @@ ignore:
 
 ```
 
+Required keys are marked in __bold__, and optional keys are in __italic__; sub-keys are indented below their parent key.
+
+- __game__, dictionary
+  - __base_url__, string: base URL for the game. For the current version of phpBB Mafiascum runs on, changing this should not be necessary.
+  - __params__, dictionary: url parameters to be used with __base_url__. Typically, only thread ID goes here.
+- __players__, list: list of players in the game
+- _aliases_, dictionary: should contain lists of aliases for each player, keyed on player name
+  - _[player name]_, list: MUST be in __players__. Contains aliases that map to _[player name]_.
+- _replacements_, dictionary: should contain lists of replacements for each player, keyed on player name
+  - _[player name]_, list: MUST be in __players__. Contains players that were replaced by _[player name]_, either directly or indirectly (i.e., if a slot was replaced twice, both names should be here).
+- _ignore_, list: list of votes to explicitly ignore.
+
+Note that when a player is replaced, a key must be added for them under _replacements_ and the __players__ list should reflect the name of the new player (i.e., the __players__ list should _always_ be kept up to date).
+
 ---
 
 ##### formatter
 
-todo, whoops. look at the example lol
+_An example of a jinja template can be found in osuka.jinja._
+
+The following template parameters are available in a jinja template:
+- __player_votes__: list; contains dictionaries, each representing a player. Sorted by number of votes, decreasing. Each dictionary contains two keys:
+  - __name__: string; the name of the _target_ player (i.e., the player being voted);
+  - __votes__: list; contains dictionaries, each representing a vote. Sorted by post number, increasing. Each dictionary contains the following keys:
+    - __post_url__: string; a permalink to the post where the vote was cast
+    - __voter__: string; the name of the _voting_ player
+    - __post_number__: string; the number of the post where the vote was cast
+- __no_execution__: list; contains dictionaries, each representing a vote for a no-execution. Each dictionary contains the following keys:
+  - __post_url__: string; a permalink to the post where the vote was cast
+  - __voter__: string; the name of the voting player
+  - __post_number__: string; the number of the post where the vote was cast
+- __not_voting__: list; contains dictionaries, each representing a player. Sorted by post number (if any), increasing. Each dictionary is guaranteed to contain the __voter__ key, but __post_url__ and __post_number__ only exist if the player explicitly unvoted (as opposed to never having voted at all):
+  - __voter__: string; the name of the non-voting player
+  - _post_url_: string; may not exist; a permalink to the post where the player unvoted, if it exists
+  - _post_number_: string; may not exist; the number of the post where the player unvoted, if it exists
