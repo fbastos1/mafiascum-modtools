@@ -132,12 +132,14 @@ Required keys are marked in __bold__, and optional keys are in __italic__; sub-k
 - __game__, dictionary
   - __base_url__, string: base URL for the game. For the current version of phpBB Mafiascum runs on, changing this should not be necessary.
   - __params__, dictionary: url parameters to be used with __base_url__. Typically, only thread ID goes here.
-- __players__, list: list of players in the game
+- __players__, list: list of players in the game.
 - _aliases_, dictionary: should contain lists of aliases for each player, keyed on player name
   - _[player name]_, list: MUST be in __players__. Contains aliases that map to _[player name]_.
 - _replacements_, dictionary: should contain lists of replacements for each player, keyed on player name
   - _[player name]_, list: MUST be in __players__. Contains players that were replaced by _[player name]_, either directly or indirectly (i.e., if a slot was replaced twice, both names should be here).
 - _ignore_, list: list of votes to explicitly ignore.
+
+__NOTE: votes from a user whose username is not in__ _players_ __will NOT be counted. Make sure the player list is correct and contains no typos to ensure vote count correctness; the counter does not perform fuzzy matching on the voter's name against the player list.__
 
 Note that when a player is replaced, a key must be added for them under _replacements_ and the __players__ list should reflect the name of the new player (i.e., the __players__ list should _always_ be kept up to date).
 
