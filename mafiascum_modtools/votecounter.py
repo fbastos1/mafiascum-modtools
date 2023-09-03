@@ -344,7 +344,7 @@ def parse_game_yaml(filename):
         logger.critical('could not find game file {}'.format(filename))
 
 
-def count_votes(game_definition, start=None, end=None, **kwargs):
+def count_votes(game, start=None, end=None, **kwargs):
     """counts the votes for a game.
 
     Args:
@@ -475,7 +475,8 @@ def format_votecount(template, player_list, player_case_map, vote_targets):
     return template.render(player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
 
 
-if __name__ == '__main__':
+def main():
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--start', '-s', type=int, help='the starting post to count from', default=None)
     parser.add_argument('--end', '-e', type=int, help='the ending post to count to', default=None)
@@ -530,3 +531,7 @@ if __name__ == '__main__':
             print(format_votecount(template, game['players'], player_case_map, vote_targets))
     else:
         print(vote_targets)
+
+
+if __name__ == '__main__':
+    main()
