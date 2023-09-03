@@ -23,11 +23,11 @@ output is not BBCode-formatted.
 
 ##### setup
 
+##### Setup
+
 This is a command-line utility with no graphical interface. As such, the user is expected to be able to run the script from a shell.
 
-The recommended way of fetching the source is through `git clone`. If you don't have git installed, you can download the archived repo from the Github web UI or install git with your preferred package manager. [Chocolatey](https://chocolatey.org/) on Windows and [Homebrew](https://brew.sh/) on macOS are popular choices.
-
-After installing git and Python 3, you can install the package along with all its dependencies with the following command:
+After installing Python 3, you can install the package along with all its dependencies using the following command:
 
 ```
 pip install mafiascum-modtools
