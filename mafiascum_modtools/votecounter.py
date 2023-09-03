@@ -475,6 +475,36 @@ def format_votecount(template, player_list, player_case_map, vote_targets):
     return template.render(player_votes=player_votes, not_voting=not_voting, no_execution=no_execution)
 
 
+def process_cli_args(args, parsing_options):
+
+    game = parse_game_yaml(args.game_definition_yaml)
+    try:
+        res = count_votes(game, start=args.start, end=args.end, **parsing_options)
+    except UnresolvedVoteError as e:
+        logger.critical(f'Could not complete vote counting! UnresolvedVoteError: {e}')
+        exit(1)
+
+    logger.info('hammer? {}'.format(res['hammer']))
+    vote_targets = {player: [] for player in res['votes']}
+    vote_targets[None] = []
+    vote_targets[NO_EXEC_VOTE] = []
+
+    for vote in res['votes'].values():
+        logger.debug('[{}] {} -> {}'.format(vote['post_number'], vote['voter'], vote['target']))
+        vote_targets[vote['target']].append(vote)
+
+    player_case_map = {player.lower(): player for player in game['players']}
+    player_case_map[None] = None
+
+    if (args.template):
+        with open(args.template) as f:
+            template = Template(f.read())
+            print('\n\tFINAL VOTE COUNT:\n\n')
+            print(format_votecount(template, game['players'], player_case_map, vote_targets))
+    else:
+        print(vote_targets)
+
+
 def main():
     
     parser = argparse.ArgumentParser()
@@ -505,32 +535,7 @@ def main():
     if args.ignore_hammer:
         parsing_options['ignore_hammer'] = True
 
-    game = parse_game_yaml(args.game_definition_yaml)
-    try:
-        res = count_votes(game, start=args.start, end=args.end, **parsing_options)
-    except UnresolvedVoteError as e:
-        logger.critical(f'Could not complete vote counting! UnresolvedVoteError: {e}')
-        exit(1)
-
-    logger.info('hammer? {}'.format(res['hammer']))
-    vote_targets = {player: [] for player in res['votes']}
-    vote_targets[None] = []
-    vote_targets[NO_EXEC_VOTE] = []
-
-    for vote in res['votes'].values():
-        logger.debug('[{}] {} -> {}'.format(vote['post_number'], vote['voter'], vote['target']))
-        vote_targets[vote['target']].append(vote)
-
-    player_case_map = {player.lower(): player for player in game['players']}
-    player_case_map[None] = None
-
-    if (args.template):
-        with open(args.template) as f:
-            template = Template(f.read())
-            print('\n\tFINAL VOTE COUNT:\n\n')
-            print(format_votecount(template, game['players'], player_case_map, vote_targets))
-    else:
-        print(vote_targets)
+    process_cli_args(args, parsing_options)
 
 
 if __name__ == '__main__':
