@@ -19,7 +19,7 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         'console_scripts': [
-            'votecounter = mafiascum_modtools.wrapper_function',  # Replace 'main' with the name of your main function
+            'votecounter = mafiascum_modtools:wrapper_function',  # Replace 'main' with the name of your main function
         ],
     },
     classifiers=[
