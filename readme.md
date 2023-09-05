@@ -23,8 +23,6 @@ output is not BBCode-formatted.
 
 ##### setup
 
-##### Setup
-
 This is a command-line utility with no graphical interface. As such, the user is expected to be able to run the script from a shell.
 
 After installing Python 3, you can install the package along with all its dependencies using the following command:
