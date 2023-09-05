@@ -1,0 +1,6 @@
+ruamel.yaml
+jellyfish
+coloredlogs
+requests
+bs4
+jinja2
